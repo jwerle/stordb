@@ -17,10 +17,10 @@ DOBJS = $(DEPS:.c=.o)
 LIBV8 ?= $(wildcard v8/out/$(V8ARCH).release/lib*.a)
 LDB ?= leveldb/libleveldb.a
 
-STORDB_JS_PATH ?= $(PREFIX)/lib/stordb.js
+STORDB_JS_PATH ?= $(PREFIX)/lib/stordb
 
 CXXFLAGS += -std=gnu++11
-CXXFLAGS += -Ideps -Iinclude -Iv8/include -Ileveldb/include 
+CXXFLAGS += -Ideps -Iinclude -Iv8/include -Ileveldb/include
 CXXFLAGS += -DSTORDB_JS_PATH='"$(STORDB_JS_PATH)"'
 
 ifeq ($(OS), Darwin)
@@ -50,12 +50,12 @@ v8:
 	@make $(V8ARCH).release -C $(@)
 
 clean:
-	@#echo "  MAKE clean v8"
-	@#make clean -C v8
-	@#echo "  MAKE clean leveldb"
-	@#make clean -C leveldb
-	@#echo "  MAKE clean v8"
-	@#make clean -C v8
+	@echo "  MAKE clean v8"
+	@make clean -C v8
+	@echo "  MAKE clean leveldb"
+	@make clean -C leveldb
+	@echo "  MAKE clean v8"
+	@make clean -C v8
 	@echo "  RM $(BIN)"
 	@rm -f $(BIN)
 

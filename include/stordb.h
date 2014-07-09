@@ -20,8 +20,8 @@ typedef struct {
   // v8
   struct {
     v8::Isolate *iso;
-    v8::Persistent<v8::ObjectTemplate> global;
-    v8::Persistent<v8::Context> ctx;
+    v8::Handle<v8::Context> ctx;
+    v8::Handle<v8::ObjectTemplate> global;
   } v8;
 } stordb_t;
 

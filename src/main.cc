@@ -9,6 +9,7 @@ int
 main (int argc, char **argv) {
   // v8 initialization
   {
+    argv[argc++] = (char *) "--harmony";
     v8::V8::InitializeICU();
     v8::V8::SetFlagsFromCommandLine(&argc, argv, true);
   }
@@ -22,5 +23,6 @@ main (int argc, char **argv) {
     if (1 == rc) { return 1; }
   }
 
+  v8::V8::Dispose();
   return 0;
 }
