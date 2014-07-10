@@ -31,7 +31,7 @@ stordb_runjs (stordb_t *sdb, const char *name, const char *src) {
   } else {
     if (tc.HasCaught()) { return v8::Null(sdb->v8.iso); }
     if (!result->IsUndefined()) {
-      printf("Fo\n");
+      // ok!
     }
   }
 

@@ -250,7 +250,6 @@ _initialize_v8_bindings (stordb_t *sdb) {
 
   // util
   XF("print", stordb_bprint);
-  XF("Xdebug", stordb_bdebug_);
 
   // db
   XF("__ldb_new", stordb_db_bnew);

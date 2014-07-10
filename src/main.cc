@@ -23,6 +23,8 @@ main (int argc, char **argv, char **env) {
     if (1 == rc) { return 1; }
   }
 
+  // run any files passed in
+
   v8::V8::Dispose();
   return 0;
 }
