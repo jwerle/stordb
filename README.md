@@ -5,8 +5,7 @@ StorDB = LevelDB + V8 (ES6)
 
 ## status
 
-WIP
-
+WIP - Reach out if you want to get involved :]
 
 ## example
 
