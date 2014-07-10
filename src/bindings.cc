@@ -12,3 +12,8 @@ stordb_bprint (const v8::FunctionCallbackInfo<v8::Value> &arguments) {
   printf("%s\n", *str);
   fflush(stdout);
 }
+
+void
+stordb_bdebug_ (const v8::FunctionCallbackInfo<v8::Value> &arguments) {
+
+}

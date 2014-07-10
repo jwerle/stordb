@@ -5,7 +5,7 @@
 #include <v8.h>
 #include "stordb.h"
 
-int
+v8::Handle<v8::Value>
 stordb_runjs (stordb_t *, const char *, const char *);
 
 #endif

@@ -10,6 +10,9 @@
  */
 
 void
+stordb_bdebug_ (const v8::FunctionCallbackInfo<v8::Value> &arguments);
+
+void
 stordb_bfprintf (const v8::FunctionCallbackInfo<v8::Value> &arguments);
 
 void
