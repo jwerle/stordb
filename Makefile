@@ -2,6 +2,7 @@
 OS ?= $(shell uname)
 CXX ?= g++
 BIN ?= stordb
+V8ARCH ?= x64
 
 #PREFIX ?= /usr/local
 PREFIX = $(shell pwd)
@@ -14,21 +15,17 @@ OBJS = $(SRC:.cc=.o)
 DEPS = $(wildcard deps/*/*.c)
 DOBJS = $(DEPS:.c=.o)
 
-LIBV8_BASE ?= $(shell find v8/out/native/ -name 'libv8_base.*.a' | head -1)
-LIBV8_SNAPSHOT ?= $(shell find v8/out/native/ -name 'libv8_snapshot.a' | head -1)
-LIBV8 = $(LIBV8_BASE) $(LIBV8_SNAPSHOT)
+LIBV8 ?= $(wildcard v8/out/$(V8ARCH).release/lib*.a)
 LDB ?= leveldb/libleveldb.a
 
 STORDB_JS_PATH ?= $(PREFIX)/lib/stordb
 
 CXXFLAGS += -std=gnu++11
-CXXFLAGS += -Ideps -Iinclude -Iv8/include -Ileveldb/include -lsnappy -lpthread
+CXXFLAGS += -Ideps -Iinclude -Iv8/include -Ileveldb/include
 CXXFLAGS += -DSTORDB_JS_PATH='"$(STORDB_JS_PATH)"'
 
 ifeq ($(OS), Darwin)
 	CXXFLAGS += -stdlib=libstdc++
-else
-	CXXFLAGS += -lrt
 endif
 
 .PHONY: $(BIN)
@@ -54,8 +51,7 @@ leveldb:
 
 v8:
 	@echo "  MAKE $(@)"
-	@make dependencies -C $(@)
-	@make i18nsupport=off native -C $(@)
+	@make $(V8ARCH).release -C $(@)
 
 clean:
 	@echo "  MAKE clean v8"
