@@ -1,0 +1,9 @@
+{
+  "name": "isdir",
+  "version": "0.0.1",
+  "repo": "jwerle/isdir.c",
+  "description": "Determine if path is a directory",
+  "keywords": ["is", "directory"],
+  "src": ["isdir.h", "isdir.c"]
+}
+

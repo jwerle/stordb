@@ -3,45 +3,50 @@
 #include <v8.h>
 
 #include "stordb.h"
-#include "js.h"
-#include "db.h"
-#include "bindings.h"
+#include "stordb/macro.h"
+#include "stordb/js.h"
+
+#include "modules/sys.h"
+#include "modules/io.h"
+#include "modules/fs.h"
 
 extern "C" {
 #include <fs/fs.h>
 #include <asprintf/asprintf.h>
 }
 
+#define BUFMAX 4096
+
+#define xfree(v) ({ v ? (free(v), 0) : 0; })
+
 static stordb_t *gsdb_ = NULL;
 
 #define X(s) (char *) s
 static char *BOOT_SCRIPTS[] = {
-  X("env.js"),
-};
-
-static char *SCRIPTS[] = {
-  X("vm.js"),
-  X("database.js"),
-  X("stordb.js"),
+  X("boot.js"),
   NULL
 };
+
 #undef X
 
 static int
-_initialize_v8 (stordb_t *, char **);
+_initialize_v8 (stordb_t *, int, char **, char **);
 
 static int
 _initialize_v8_bindings (stordb_t *);
 
 static int
-_set_env (stordb_t *, char **);
+_set_env (stordb_t *);
+
+static int
+_set_argv (stordb_t *);
 
 int
-stordb_initialize (stordb_t *sdb, char **env) {
+stordb_initialize (stordb_t *sdb, int argc, char **argv, char **env) {
   int rc = 0;
-  rc = _initialize_v8(sdb, env);
-  if (1 == rc) { return 1; }
   gsdb_ = sdb;
+  rc = _initialize_v8(sdb, argc, argv, env);
+  if (1 == rc) { return 1; }
   return 0;
 }
 
@@ -51,28 +56,36 @@ stordb_get_current () {
 }
 
 static int
-_set_env (stordb_t *sdb, char **env) {
+_set_env (stordb_t *sdb) {
+  char **env = sdb->env;
   char *line = NULL;
-  char key[BUFSIZ];
-  char value[BUFSIZ];
-  char tmp[BUFSIZ];
+  char key[BUFMAX];
+  char value[BUFMAX];
+  char tmp[BUFMAX];
+  char out[BUFMAX];
   char ch = 0;
+  int j = 0;
   int i = 0;
   int body = 0;
-  size_t size = 0 ;
+  size_t size = 1 ;
   sdb->env = env;
 
-  v8::Isolate::Scope isolate_scope(sdb->v8.iso);
-  v8::HandleScope hscope(sdb->v8.iso);
-  v8::Handle<v8::ObjectTemplate> ENV = v8::ObjectTemplate::New();
+  v8::Isolate *iso = v8::Isolate::GetCurrent();
+  v8::Isolate::Scope isolate_scope(iso);
+  v8::HandleScope hscope(iso);
+  v8::Handle<v8::ObjectTemplate> ENV = v8::ObjectTemplate::New(iso);
 
-  while ((line = *env++)) {
+  // init
+  memset(out, 0, BUFMAX);
+
+  // parse
+  while ((line = env[j++])) {
     i = 0;
     size = 0;
 
-    memset(tmp, 0, BUFSIZ);
-    memset(key, 0, BUFSIZ);
-    memset(value, 0, BUFSIZ);
+    memset(tmp, 0, BUFMAX);
+    memset(key, 0, BUFMAX);
+    memset(value, 0, BUFMAX);
 
     do {
       ch = line[i];
@@ -90,32 +103,61 @@ _set_env (stordb_t *sdb, char **env) {
     strncat(value, tmp, size);
     value[size] = '\0';
 
-    // set in v8
-    ENV->Set(
-        v8::String::NewFromUtf8(sdb->v8.iso, key),
-        v8::String::NewFromUtf8(sdb->v8.iso, value));
+    ENV->Set(v8::String::NewFromUtf8(iso, key),
+             v8::String::NewFromUtf8(iso, value));
   }
-
-  sdb->v8.global->Set(
-      v8::String::NewFromUtf8(sdb->v8.iso, "ENV"), ENV);
+  sdb->v8.global->Set(v8::String::NewFromUtf8(iso, "__ENV__"), ENV);
 
   return 0;
 }
 
 static int
-_initialize_v8 (stordb_t *sdb, char **env) {
+_set_argv (stordb_t *sdb) {
+  int i = 0;
+  int argc = 0;
+  char str[1024];
+  char **argv = sdb->argv;
+  char *arg = NULL;
+
+  // isolate/scope
+  v8::Isolate *iso = v8::Isolate::GetCurrent();
+  v8::Isolate::Scope isolate_scope(iso);
+  v8::HandleScope hscope(iso);
+
+  // build str
+  memset(str, 0, 1024);
+  while ((arg = argv[i++])) {
+    strcat(str, arg);
+    strcat(str, "!!");
+  }
+
+  // set `__ARGV__' string
+  v8::Handle<v8::String> ARGV = v8::String::NewFromUtf8(iso, str);
+  sdb->v8.global->Set(v8::String::NewFromUtf8(iso, "__ARGV__"), ARGV);
+  return 0;
+}
+
+static int
+_initialize_v8 (stordb_t *sdb, int argc, char **argv, char **env) {
   if (NULL == sdb) { return 1; }
   int rc = 0;
+
+  // argc/argv
+  sdb->argc = argc;
+  sdb->argv = argv;
+
+  // env
+  sdb->env = env;
 
   // mark unsafe
   sdb->v8.safe_ = 0;
 
-  // scope
+  // isolate
   v8::Isolate *iso = v8::Isolate::GetCurrent();
   // handle `NULL' isolates
-  if (NULL == iso) {
-    iso = v8::Isolate::New();
-  }
+  if (NULL == iso) { iso = v8::Isolate::New(); }
+
+  // scope
   v8::Isolate::Scope isolate_scope(iso);
   v8::HandleScope hscope(iso);
   // instance
@@ -129,7 +171,10 @@ _initialize_v8 (stordb_t *sdb, char **env) {
   rc = _initialize_v8_bindings(sdb);
 
   // env
-  rc = _set_env(sdb, env);
+  rc = _set_env(sdb);
+
+  // env
+  rc = _set_argv(sdb);
 
   // context
   v8::Handle<v8::Context> ctx = v8::Context::New(iso, NULL, global);
@@ -141,84 +186,37 @@ _initialize_v8 (stordb_t *sdb, char **env) {
   {
     v8::Handle<v8::Value> value;
     int i = 0;
-    char *js = NULL;
-    char *path = NULL;
 
     // boot scripts
-    {
-      char BSBUF[BUFSIZ];
+    do {
       size_t size = 0;
-      memset(BSBUF, 0, BUFSIZ);
+      char *path = NULL;
+      char *js = NULL;
       for (; BOOT_SCRIPTS[i]; ++i) {
         // boot script path
         path = NULL;
         asprintf(&path, "%s/%s", STORDB_JS_PATH, BOOT_SCRIPTS[i]);
         if (NULL == path) { return 1; }
         if (-1 == fs_exists(path)) {
-          fprintf(stderr,
-                  "error: (BOOT) boot script `%s' doesn't exists\n",
+          fprintf(stderr, "error: (BOOT) boot script `%s' doesn't exists\n",
                   path);
           return 1;
         }
 
         // read
         js = fs_read(path);
-        if (NULL == js) { return free(path), 1; }
+        if (NULL == js) { return xfree(path), 1; }
 
-        // append to buffer
-        strcat(BSBUF, js);
-
-        // size
-        size += strlen(js);
+        // run
+        value = stordb_runjs(sdb, path, js);
 
         // free
-        free(path);
-        free(js);
+        xfree(path);
+        xfree(js);
       }
 
-      BSBUF[size] = '\0';
-
       // exec
-      value = stordb_runjs(sdb, "[boot]", BSBUF);
-      if (v8::Null(sdb->v8.iso) == value) { return 1; }
-    }
-
-    // app scripts
-    {
-      char BSBUF[BUFSIZ];
-      size_t size = 0;
-      memset(BSBUF, 0, BUFSIZ);
-      for (i = 0; SCRIPTS[i]; ++i) {
-        // script path
-        path = NULL;
-        asprintf(&path, "%s/%s", STORDB_JS_PATH, SCRIPTS[i]);
-        if (NULL == path) { return 1; }
-        if (-1 == fs_exists(path)) {
-          fprintf(stderr, "error: script `%s' doesn't exists\n", path);
-          return 1;
-        }
-
-        // read
-        js = fs_read(path);
-        if (NULL == js) { return free(path), 1; }
-
-        // append to buffer
-        strcat(BSBUF, js);
-
-        // size
-        size += strlen(js);
-
-        // free
-        free(path);
-        free(js);
-      }
-
-      BSBUF[size] = '\0';
-
-      // exec
-      value = stordb_runjs(sdb, "[stordb]", BSBUF);
-      if (v8::Null(sdb->v8.iso) == value) { return 1; }
-    }
+    } while (0);
   }
 
   ctx->Exit();
@@ -231,34 +229,24 @@ _initialize_v8 (stordb_t *sdb, char **env) {
 static int
 _initialize_v8_bindings (stordb_t *sdb) {
   if (NULL == sdb) { return 1; }
-  v8::Handle<v8::ObjectTemplate> global = sdb->v8.global;
 
-// functions
-#define XF(k, v) \
-  global->Set(v8::String::NewFromUtf8(sdb->v8.iso, k), \
-      v8::FunctionTemplate::New(sdb->v8.iso, v));
+  // constants
+  STORDB_SET_BINDING(STORDB, "LIB_PATH", V8STRING(STORDB_JS_PATH));
+  STORDB_SET_BINDING(STORDB, "VERSION", V8STRING(STORDB_VERSION));
 
-// numbers
-#define XI(k, v) \
-  global->Set(v8::String::NewFromUtf8(sdb->v8.iso, k), \
-      v8::Number::New(sdb->v8.iso, v));
+  // special
+  STORDB_SET_BINDING(sys, "load", V8FUNCTION(stordb_sys_load));
+  STORDB_SET_BINDING(sys, "exit", V8FUNCTION(stordb_sys_exit));
+  STORDB_SET_BINDING(sys, "print", V8FUNCTION(stordb_sys_print));
+  STORDB_SET_BINDING(sys, "cwd", V8FUNCTION(stordb_sys_cwd));
+  STORDB_SET_BINDING(sys, "chdir", V8FUNCTION(stordb_sys_chdir));
 
-  // io fds
-  XI("stdin", 0);
-  XI("stdout", 1);
-  XI("stderr", 2);
-
-  // util
-  XF("print", stordb_bprint);
-
-  // db
-  XF("__ldb_new", stordb_db_bnew);
-  XF("__ldb_get", stordb_db_bget);
-  XF("__ldb_put", stordb_db_bput);
-  XF("__ldb_del", stordb_db_bdel);
-
-#undef XF
-#undef XI
+  // io
+  STORDB_SET_BINDING(io, "stdin", V8NUMBER(0));
+  STORDB_SET_BINDING(io, "stdout", V8NUMBER(1));
+  STORDB_SET_BINDING(io, "stderr", V8NUMBER(2));
+  STORDB_SET_BINDING(io, "read", V8FUNCTION(stordb_io_read));
+  STORDB_SET_BINDING(io, "write", V8FUNCTION(stordb_io_write));
 
   return 0;
 }

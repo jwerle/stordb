@@ -1,6 +1,8 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
+#include <errno.h>
 #include <v8.h>
 #include <leveldb/db.h>
 
@@ -28,6 +30,8 @@ stordb_db_new (stordb_t *sdb, const char *path) {
 
 void
 stordb_db_bnew (const v8::FunctionCallbackInfo<v8::Value> &args) {
+  int rc = 0;
+
   // scope
   v8::HandleScope scope(args.GetIsolate());
 
@@ -38,6 +42,16 @@ stordb_db_bnew (const v8::FunctionCallbackInfo<v8::Value> &args) {
   v8::Handle<v8::Value> arg = args[0];
   v8::String::Utf8Value value(arg);
   char *path = *value;
+
+  printf("%d\n", access(path, R_OK|W_OK));
+
+  if (access(path, R_OK|W_OK) > 0) {
+    // @TODO - make macro
+    args.GetIsolate()->ThrowException(
+        v8::String::NewFromUtf8(args.GetIsolate(), strerror(errno)));
+    return args.GetReturnValue().Set(v8::Null(args.GetIsolate()));
+  }
+
 
   // db instance
   stordb_db_t *db = stordb_db_new(sdb, path);
@@ -55,6 +69,7 @@ stordb_db_bnew (const v8::FunctionCallbackInfo<v8::Value> &args) {
   tpl->SetInternalFieldCount(1);
   v8::Local<v8::Object> obj = tpl->NewInstance();
   obj->SetInternalField(0, v8::External::New(args.GetIsolate(), db));
+
 
   // return to javascript
   args.GetReturnValue().Set(obj);
@@ -169,4 +184,36 @@ stordb_db_bdel (const v8::FunctionCallbackInfo<v8::Value> &args) {
   }
 
   return args.GetReturnValue().Set(v8::True(args.GetIsolate()));
+}
+
+void
+stordb_db_bfind (const v8::FunctionCallbackInfo<v8::Value> &args) {
+  v8::Handle<v8::Value> arg;
+
+  // scope
+  v8::HandleScope scope(args.GetIsolate());
+
+  // current `stordb_t'
+  stordb_t *sdb = stordb_get_current();
+
+  // `stordb_db_t' v8 ref
+  v8::Local<v8::Object> ref = args[0]->ToObject();
+  v8::Local<v8::External> wrap = v8::Local<v8::External>::Cast(ref->GetInternalField(0));
+  stordb_db_t *db = (stordb_db_t *) wrap->Value();
+
+  // key
+  arg = args[1];
+  v8::String::Utf8Value vkey(arg);
+  std::string key(*vkey);
+
+  // iterator
+  leveldb::Iterator *it = db->dbh->NewIterator(leveldb::ReadOptions());
+
+  // loop
+  for (it->Seek(key); it->Valid(); it->Next()) {
+    leveldb::Slice key = it->key();
+    leveldb::Slice value = it->value();
+  }
+
+  return args.GetReturnValue().Set(v8::Null(args.GetIsolate()));
 }

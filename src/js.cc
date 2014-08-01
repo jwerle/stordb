@@ -1,16 +1,31 @@
 
 #include <v8.h>
 #include "stordb.h"
-#include "exception.h"
-#include "js.h"
+#include "stordb/exception.h"
+#include "stordb/js.h"
+
+extern "C" {
+#include <asprintf/asprintf.h>
+}
 
 v8::Handle<v8::Value>
 stordb_runjs (stordb_t *sdb, const char *name, const char *src) {
-  v8::EscapableHandleScope handle_scope(sdb->v8.iso);
+
+#define RETURN(v) return handle_scope.Escape(v);
+
+  //isolate
+  v8::Isolate *iso = v8::Isolate::GetCurrent();
+
+  // scope
+  v8::Isolate::Scope isolate_scope(iso);
+  v8::EscapableHandleScope handle_scope(iso);
+
+  // null value
+  v8::Handle<v8::Value> null = v8::Null(iso);
 
   // script
-  v8::Handle<v8::String> v8src = v8::String::NewFromUtf8(sdb->v8.iso, src);
-  v8::Handle<v8::String> v8name = v8::String::NewFromUtf8(sdb->v8.iso, name);
+  v8::Handle<v8::String> v8src = v8::String::NewFromUtf8(iso, src);
+  v8::Handle<v8::String> v8name = v8::String::NewFromUtf8(iso, name);
   v8::TryCatch tc;
 
   // compile
@@ -18,7 +33,7 @@ stordb_runjs (stordb_t *sdb, const char *name, const char *src) {
   v8::Handle<v8::Script> script = v8::Script::Compile(v8src, &origin);
   if (script.IsEmpty()) {
     stordb_report_v8_exception(sdb, &tc);
-    return v8::Null(sdb->v8.iso);
+    return null;
   }
 
   // run
@@ -26,15 +41,16 @@ stordb_runjs (stordb_t *sdb, const char *name, const char *src) {
 
   // handle exceptions
   if (result.IsEmpty()) {
-    if (!tc.HasCaught()) { return v8::Null(sdb->v8.iso); }
-    stordb_report_v8_exception(sdb, &tc);
-  } else {
-    if (tc.HasCaught()) { return v8::Null(sdb->v8.iso); }
-    if (!result->IsUndefined()) {
-      // ok!
+    if (tc.HasCaught()) {
+      stordb_report_v8_exception(sdb, &tc);
     }
+    return null;
+  } else if (tc.HasCaught()) {
+    return null;
   }
 
-  return handle_scope.Escape(result);
+  RETURN(result);
+
+#undef RETURN
 }
 

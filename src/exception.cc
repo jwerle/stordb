@@ -4,13 +4,14 @@
 #include <v8.h>
 
 #include "stordb.h"
-#include "exception.h"
+#include "stordb/exception.h"
 
 #define cstr(v) (*v? *v : "")
 
 void
 stordb_report_v8_exception (stordb_t *sdb, v8::TryCatch* tc) {
-  v8::HandleScope handle_scope(sdb->v8.iso);
+  v8::Isolate *iso = v8::Isolate::GetCurrent();
+  v8::HandleScope handle_scope(iso);
   v8::String::Utf8Value exception(tc->Exception());
   const char* exception_string = cstr(exception);
   v8::Handle<v8::Message> message = tc->Message();
@@ -42,5 +43,7 @@ stordb_report_v8_exception (stordb_t *sdb, v8::TryCatch* tc) {
       fprintf(stderr, "%s\n", stack_trace_string);
     }
   }
+
+  exit(1);
 }
 

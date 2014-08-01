@@ -8,6 +8,7 @@ PREFIX = $(shell pwd)
 
 MAIN = src/main.cc
 SRC = $(filter-out $(MAIN), $(wildcard src/*.cc))
+SRC += $(wildcard src/modules/*.cc)
 OBJS = $(SRC:.cc=.o)
 
 DEPS = $(wildcard deps/*/*.c)
@@ -40,6 +41,9 @@ $(OBJS):
 
 $(DOBJS):
 	$(CC) -std=c99 -Ideps -c $(@:.o=.c) -o $(@)
+
+install:
+	install $(BIN) $(PREFIX)/bin
 
 .PHONY: leveldb v8
 dependencies: leveldb v8

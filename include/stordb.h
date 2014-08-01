@@ -9,7 +9,11 @@
 #error Missing path to `stordb.js'. Please define `STORDB_JS_PATH'
 #endif
 
+#define STORDB_VERSION "0.0.1"
+
 typedef struct {
+  int argc;
+  char **argv;
   char **env;
 
   // v8
@@ -26,7 +30,7 @@ typedef struct {
  */
 
 int
-stordb_initialize (stordb_t *, char **);
+stordb_initialize (stordb_t *, int, char **, char **);
 
 stordb_t *
 stordb_get_current ();
