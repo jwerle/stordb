@@ -24,8 +24,6 @@
 
 typedef struct stat fs_stats;
 
-
-
 /**
  * Prints the last error to stderr
  */

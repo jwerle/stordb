@@ -11,6 +11,14 @@
 
 static char *stordb_err = NULL;
 
+STORDB_MODULE(db, {
+  STORDB_MODULE_SET(db, "open", V8FUNCTION(stordb_db_bnew));
+  STORDB_MODULE_SET(db, "get", V8FUNCTION(stordb_db_bget));
+  STORDB_MODULE_SET(db, "put", V8FUNCTION(stordb_db_bput));
+  STORDB_MODULE_SET(db, "del", V8FUNCTION(stordb_db_bdel));
+  STORDB_MODULE_SET(db, "find", V8FUNCTION(stordb_db_bfind));
+});
+
 stordb_db_t *
 stordb_db_new (stordb_t *sdb, const char *path) {
   stordb_db_t *db = (stordb_db_t *) malloc(sizeof(stordb_db_t));

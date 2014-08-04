@@ -4,10 +4,12 @@
 
 #include "stordb.h"
 #include "stordb/macro.h"
+#include "stordb/module.h"
 #include "stordb/js.h"
 
 #include "modules/sys.h"
 #include "modules/io.h"
+#include "modules/db.h"
 #include "modules/fs.h"
 
 extern "C" {
@@ -40,6 +42,13 @@ _set_env (stordb_t *);
 
 static int
 _set_argv (stordb_t *);
+
+STORDB_MODULE(STORDB, {
+  // constants
+  STORDB_MODULE_SET(STORDB, "LIB_PATH", V8STRING(STORDB_JS_PATH));
+  STORDB_MODULE_SET(STORDB, "VERSION", V8STRING(STORDB_VERSION));
+
+});
 
 int
 stordb_initialize (stordb_t *sdb, int argc, char **argv, char **env) {
@@ -106,7 +115,7 @@ _set_env (stordb_t *sdb) {
     ENV->Set(v8::String::NewFromUtf8(iso, key),
              v8::String::NewFromUtf8(iso, value));
   }
-  sdb->v8.global->Set(v8::String::NewFromUtf8(iso, "__ENV__"), ENV);
+  sdb->v8.global->Set(v8::String::NewFromUtf8(iso, "ENV"), ENV);
 
   return 0;
 }
@@ -167,6 +176,10 @@ _initialize_v8 (stordb_t *sdb, int argc, char **argv, char **env) {
   v8::Handle<v8::ObjectTemplate> global = v8::ObjectTemplate::New(iso);
   sdb->v8.global = global;
 
+  // native modules
+  v8::Handle<v8::ObjectTemplate> modules = v8::ObjectTemplate::New(iso);
+  sdb->v8.modules = modules;
+
   // bindings
   rc = _initialize_v8_bindings(sdb);
 
@@ -181,8 +194,10 @@ _initialize_v8 (stordb_t *sdb, int argc, char **argv, char **env) {
   v8::Context::Scope context_scope(ctx);
   sdb->v8.ctx = ctx;
 
+
   // bootstrap
   ctx->Enter();
+
   {
     v8::Handle<v8::Value> value;
     int i = 0;
@@ -230,23 +245,17 @@ static int
 _initialize_v8_bindings (stordb_t *sdb) {
   if (NULL == sdb) { return 1; }
 
-  // constants
-  STORDB_SET_BINDING(STORDB, "LIB_PATH", V8STRING(STORDB_JS_PATH));
-  STORDB_SET_BINDING(STORDB, "VERSION", V8STRING(STORDB_VERSION));
+  // boot helpers
+  STORDB_SET_BINDING("__native_require__", V8FUNCTION(stordb_sys_load));
+  STORDB_SET_BINDING("__native_print__", V8FUNCTION(stordb_sys_print));
+  STORDB_SET_BINDING("__native_exit__", V8FUNCTION(stordb_sys_exit));
 
-  // special
-  STORDB_SET_BINDING(sys, "load", V8FUNCTION(stordb_sys_load));
-  STORDB_SET_BINDING(sys, "exit", V8FUNCTION(stordb_sys_exit));
-  STORDB_SET_BINDING(sys, "print", V8FUNCTION(stordb_sys_print));
-  STORDB_SET_BINDING(sys, "cwd", V8FUNCTION(stordb_sys_cwd));
-  STORDB_SET_BINDING(sys, "chdir", V8FUNCTION(stordb_sys_chdir));
+  STORDB_MODULE_INIT(STORDB);
+  STORDB_MODULE_INIT(sys);
+  STORDB_MODULE_INIT(io);
+  STORDB_MODULE_INIT(fs);
+  STORDB_MODULE_INIT(db);
 
-  // io
-  STORDB_SET_BINDING(io, "stdin", V8NUMBER(0));
-  STORDB_SET_BINDING(io, "stdout", V8NUMBER(1));
-  STORDB_SET_BINDING(io, "stderr", V8NUMBER(2));
-  STORDB_SET_BINDING(io, "read", V8FUNCTION(stordb_io_read));
-  STORDB_SET_BINDING(io, "write", V8FUNCTION(stordb_io_write));
 
   return 0;
 }

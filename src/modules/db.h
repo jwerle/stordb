@@ -6,6 +6,9 @@
 #include <v8.h>
 #include <leveldb/db.h>
 #include "stordb.h"
+#include "stordb/module.h"
+
+STORDB_MODULE_DECLARE(db);
 
 typedef struct {
   const char *path;

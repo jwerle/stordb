@@ -1,8 +1,11 @@
 
-var env = require('env')
+let env = require('env')
 
 export function main (argv) {
-  console.log('hello');
-  console.log('%s', env.get('USER'));
+  console.log([
+    'user: %s',
+    'argv: %s',
+    'cwd: %s'
+  ].join('\n'), env.USER, argv.join(', '), program.cwd());
   return 0;
 }

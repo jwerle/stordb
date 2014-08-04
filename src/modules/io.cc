@@ -1,10 +1,19 @@
 
 #include "stordb.h"
 #include "stordb/macro.h"
+#include "stordb/module.h"
 #include "io.h"
 
 extern "C" {
 }
+
+STORDB_MODULE(io, {
+  STORDB_MODULE_SET(io, "stdin", V8NUMBER(0));
+  STORDB_MODULE_SET(io, "stdout", V8NUMBER(1));
+  STORDB_MODULE_SET(io, "stderr", V8NUMBER(2));
+  STORDB_MODULE_SET(io, "read", V8FUNCTION(stordb_io_read));
+  STORDB_MODULE_SET(io, "write", V8FUNCTION(stordb_io_write));
+});
 
 void
 stordb_io_read (const v8::FunctionCallbackInfo<v8::Value> &args) {

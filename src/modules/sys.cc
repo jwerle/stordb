@@ -19,23 +19,38 @@ extern "C" {
 #include <fs/fs.h>
 }
 
+STORDB_MODULE(sys, {
+  STORDB_MODULE_SET(sys, "exit", V8FUNCTION(stordb_sys_exit));
+  STORDB_MODULE_SET(sys, "load", V8FUNCTION(stordb_sys_load));
+  STORDB_MODULE_SET(sys, "print", V8FUNCTION(stordb_sys_print));
+  STORDB_MODULE_SET(sys, "cwd", V8FUNCTION(stordb_sys_cwd));
+  STORDB_MODULE_SET(sys, "chdir", V8FUNCTION(stordb_sys_chdir));
+  STORDB_MODULE_SET(sys, "access", V8FUNCTION(stordb_sys_access));
+  STORDB_MODULE_SET(sys, "system", V8FUNCTION(stordb_sys_system));
+
+  STORDB_MODULE_SET(sys, "R_OK", V8NUMBER(R_OK));
+  STORDB_MODULE_SET(sys, "F_OK", V8NUMBER(F_OK));
+  STORDB_MODULE_SET(sys, "W_OK", V8NUMBER(W_OK));
+})
+
 static char *
 wrap (char *src) {
   char *wrapped = NULL;
   char *key = NULL;
   asprintf(&key, "__sandbox__%ld", time(NULL) * rand());
   asprintf(&wrapped, ""
-      "var module = {exports: {}};"
-      "var exports = module.exports;"
       "module %s {"
+        "var module = {exports: {}};"
+        "var exports = module.exports;"
         "export function __unwrap__ () {"
-          "for (var prop in %s) {"
-            "if ('__unwrap__' != prop) { module.exports[prop] = %s[prop]; }"
+          "for (var _ in %s) {"
+            "if ('__unwrap__' != _) { module.exports[_] = %s[_]; }"
           "}"
+          "return module;"
         "}"
         "%s"
       "}"
-       "%s.__unwrap__(); module;",
+       "%s.__unwrap__();",
        key, key, key, src, key);
 
   free(key);
@@ -90,6 +105,7 @@ resolve (char *path) {
 
 void
 stordb_sys_print (const v8::FunctionCallbackInfo<v8::Value> &args) {
+  V8SCOPE(args);
   v8::HandleScope scope(args.GetIsolate());
   v8::String::Utf8Value str(args[0]);
   printf("%s\n", *str);
@@ -98,34 +114,28 @@ stordb_sys_print (const v8::FunctionCallbackInfo<v8::Value> &args) {
 
 void
 stordb_sys_load (const v8::FunctionCallbackInfo<v8::Value> &args) {
+  V8SCOPE(args);
   char *orig = NULL;
   char *path = NULL;
   char *buf = NULL;
   char *err = NULL;
   int resolved = 0;
 
-  // isolate
-  v8::Isolate *iso = args.GetIsolate();
-
-  // scope
-  v8::Isolate::Scope isolate_scope(iso);
-  v8::HandleScope scope(iso);
-
-  // arg value
-  v8::Handle<v8::Value> arg;
-
   // protect against bad arguments
   if (args.Length() < 1) {
-    return args.GetReturnValue().Set(v8::Null(iso));
+    V8RETURN(V8NULL());
   }
 
   // path
-  arg = args[0];
-  v8::String::Utf8Value vpath(arg);
+  v8::String::Utf8Value vpath(args[0]);
   path = *vpath;
 
   // current `stordb_t'
   stordb_t *sdb = stordb_get_current();
+
+  if (0 == strcmp("__native_bindings__", path)) {
+    V8RETURN(sdb->v8.modules->NewInstance());
+  }
 
   // resolve
   orig = path;
@@ -134,14 +144,16 @@ stordb_sys_load (const v8::FunctionCallbackInfo<v8::Value> &args) {
   // handle not found
   if (NULL == path) {
     asprintf(&err, "ENOENT: `%s' not found", orig);
-    iso->ThrowException(v8::String::NewFromUtf8(iso, err));
+    V8THROW(err);
     free(err);
-    return args.GetReturnValue().Set(v8::Null(iso));
+    V8RETURN(V8NULL());
   }
 
   // read
   buf = fs_read(path);
-  if (NULL == buf) { return args.GetReturnValue().Set(v8::Null(iso)); }
+  if (NULL == buf) {
+    V8RETURN(V8NULL());
+  }
 
   // module wrap
   char *mod = wrap(buf);
@@ -151,19 +163,13 @@ stordb_sys_load (const v8::FunctionCallbackInfo<v8::Value> &args) {
   free(mod);
 
   // return
-  args.GetReturnValue().Set(result);
+  V8RETURN(result);
 }
 
 void
 stordb_sys_exit (const v8::FunctionCallbackInfo<v8::Value> &args) {
+  V8SCOPE(args);
   int rc = 0;
-
-  // isolate
-  v8::Isolate *iso = args.GetIsolate();
-
-  // scope
-  v8::Isolate::Scope isolate_scope(iso);
-  v8::HandleScope scope(iso);
 
   // arg value
   v8::Handle<v8::Value> arg = args[0];
@@ -183,38 +189,57 @@ stordb_sys_exit (const v8::FunctionCallbackInfo<v8::Value> &args) {
 
 void
 stordb_sys_cwd (const v8::FunctionCallbackInfo<v8::Value> &args) {
+  V8SCOPE(args);
   char cwd[1024];
-
-  // isolate
-  v8::Isolate *iso = args.GetIsolate();
-
-  // scope
-  v8::Isolate::Scope isolate_scope(iso);
-  v8::HandleScope scope(iso);
   if (NULL == getcwd(cwd, sizeof(cwd))) {
-    iso->ThrowException(v8::String::NewFromUtf8(iso, strerror(errno)));
-    return;
+    V8THROW(strerror(errno));
+    V8RETURN(V8NULL());
   }
-  args.GetReturnValue().Set(V8STRING(cwd));
+
+  V8RETURN(V8STRING(cwd));
 }
 
 void
 stordb_sys_chdir (const v8::FunctionCallbackInfo<v8::Value> &args) {
-  char *path = NULL;
-  // isolate
-  v8::Isolate *iso = args.GetIsolate();
-
-  // scope
-  v8::Isolate::Scope isolate_scope(iso);
-  v8::HandleScope scope(iso);
-
-  // arg value
-  v8::Handle<v8::Value> arg = args[0];
-  v8::String::Utf8Value vpath(arg);
-  path = *vpath;
-
-  int rc = chdir(path);
-  if (0 != rc) {
-    iso->ThrowException(v8::String::NewFromUtf8(iso, strerror(errno)));
+  V8SCOPE(args);
+  v8::String::Utf8Value path(args[0]);
+  if (0 != chdir(*path)) {
+    V8THROW(strerror(errno));
   }
+}
+
+void
+stordb_sys_access (const v8::FunctionCallbackInfo<v8::Value> &args) {
+  V8SCOPE(args);
+
+  if (2 != args.Length()) {
+    V8RETURN(V8FALSE());
+  }
+
+  // path
+  v8::String::Utf8Value path(args[0]);
+
+  // mode
+  v8::Handle<v8::Number> mode = args[1]->ToNumber();
+
+  if (0 != access(*path, mode->Int32Value())) {
+    V8THROW(strerror(errno));
+    V8RETURN(V8FALSE());
+  }
+
+  V8RETURN(V8TRUE());
+}
+
+void
+stordb_sys_system (const v8::FunctionCallbackInfo<v8::Value> &args) {
+  V8SCOPE(args);
+
+  // command
+  v8::String::Utf8Value cmd(args[0]);
+
+  // run
+  v8::Handle<v8::Number> rc = V8NUMBER(system(*cmd));
+
+  // return exit code
+  V8RETURN(rc);
 }
