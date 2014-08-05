@@ -20,6 +20,9 @@ LDB ?= leveldb/libleveldb.a
 
 STORDB_JS_PATH ?= $(PREFIX)/lib/stordb
 
+TARGET_NAME = libstordb
+TARGET_STATIC = $(TARGET_NAME).a
+
 CXXFLAGS += -std=gnu++11
 CXXFLAGS += -Ideps -Iinclude -Iv8/include -Ileveldb/include
 CXXFLAGS += -DSTORDB_JS_PATH='"$(STORDB_JS_PATH)"'
@@ -28,9 +31,12 @@ ifeq ($(OS), Darwin)
 	CXXFLAGS += -stdlib=libstdc++
 endif
 
-.PHONY: $(BIN)
-$(BIN): $(DOBJS) $(OBJS)
-	$(CXX) $(OBJS) $(DOBJS) $(LIBV8) $(LDB) $(MAIN) $(CXXFLAGS) -o $(BIN)
+.PHONY: $(TARGET_STATIC) $(BIN)
+$(BIN): $(TARGET_STATIC)
+	$(CXX) $(TARGET_STATIC) $(LIBV8) $(LDB) $(MAIN) $(CXXFLAGS) -o $(BIN)
+
+$(TARGET_STATIC): $(OBJS) $(DOBJS)
+	ar crus $(TARGET_STATIC) $(OBJS) $(DOBJS)
 
 .PHONY: $(OBJS)
 $(OBJS):

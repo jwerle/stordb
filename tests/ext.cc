@@ -1,12 +1,10 @@
 
 #include <v8.h>
 #include <stordb.h>
+#include <stordb/module.h>
 
-STORDB_MODULE(ext, {
-  STORDB_MODULE_SET(ext, "test", Test);
-});
-
-void Test (v8::FunctionCallbackInfo &args) {
-
+extern "C" void
+Init (v8::Handle<v8::ObjectTemplate> exports) {
+  printf("foo\n");
 }
 

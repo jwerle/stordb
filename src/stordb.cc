@@ -9,8 +9,9 @@
 
 #include "modules/sys.h"
 #include "modules/io.h"
-#include "modules/db.h"
 #include "modules/fs.h"
+#include "modules/ld.h"
+#include "modules/db.h"
 
 extern "C" {
 #include <fs/fs.h>
@@ -254,6 +255,7 @@ _initialize_v8_bindings (stordb_t *sdb) {
   STORDB_MODULE_INIT(sys);
   STORDB_MODULE_INIT(io);
   STORDB_MODULE_INIT(fs);
+  STORDB_MODULE_INIT(ld);
   STORDB_MODULE_INIT(db);
 
 
