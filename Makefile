@@ -31,10 +31,11 @@ ifeq ($(OS), Darwin)
 	CXXFLAGS += -stdlib=libstdc++
 endif
 
-.PHONY: $(TARGET_STATIC) $(BIN)
+.PHONY: $(BIN)
 $(BIN): $(TARGET_STATIC)
 	$(CXX) $(TARGET_STATIC) $(LIBV8) $(LDB) $(MAIN) $(CXXFLAGS) -o $(BIN)
 
+.PHONY: $(TARGET_STATIC)
 $(TARGET_STATIC): $(OBJS) $(DOBJS)
 	ar crus $(TARGET_STATIC) $(OBJS) $(DOBJS)
 

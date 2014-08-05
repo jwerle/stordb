@@ -3,6 +3,7 @@
 *.lo
 *.o
 *.obj
+*.stordb
 
 # Compiled Dynamic libraries
 *.so
