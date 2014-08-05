@@ -5,7 +5,7 @@ BIN ?= stordb
 V8ARCH ?= x64
 
 #PREFIX ?= /usr/local
-PREFIX = $(shell pwd)
+PREFIX ?= $(shell pwd)
 
 MAIN = src/main.cc
 SRC = $(filter-out $(MAIN), $(wildcard src/*.cc))
