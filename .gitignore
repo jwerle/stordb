@@ -20,7 +20,6 @@
 *.exe
 *.out
 *.app
-stordb
 
 # osx
 *.DS_Store
