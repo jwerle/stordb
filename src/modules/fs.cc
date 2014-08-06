@@ -1,5 +1,9 @@
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include <errno.h>
+
 #include "stordb.h"
 #include "stordb/macro.h"
 #include "stordb/module.h"
@@ -281,7 +285,7 @@ stordb_fs_btruncate (const v8::FunctionCallbackInfo<v8::Value> &args) {
   // len
   int len = args[1]->ToNumber()->Int32Value();
 
-  if (0 != truncate(*path, len)) {
+  if (0 != fs_truncate(*path, len)) {
     V8THROW(strerror(errno));
   }
 

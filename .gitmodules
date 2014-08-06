@@ -3,6 +3,3 @@
   path=v8
   url=git://github.com/v8/v8.git
 
-[submodule "level"]
-  path=leveldb
-  url=git://github.com/basho/leveldb.git

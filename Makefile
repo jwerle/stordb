@@ -16,8 +16,7 @@ OBJS = $(SRC:.cc=.o)
 DEPS = $(wildcard deps/*/*.c)
 DOBJS = $(DEPS:.c=.o)
 
-LIBV8 ?= $(wildcard $(CWD)/v8/out/$(V8ARCH).release/lib*.a)
-LDB ?= leveldb/libleveldb.a
+LIBV8 ?= $(wildcard $(CWD)/v8/out/native/lib*.a)
 
 STORDB_JS_PATH ?= $(PREFIX)/lib/stordb
 
@@ -25,11 +24,13 @@ TARGET_NAME = libstordb
 TARGET_STATIC = $(TARGET_NAME).a
 
 CXXFLAGS += -std=gnu++11
-CXXFLAGS += -Ideps -Iinclude -Iv8/include -Ileveldb/include
+CXXFLAGS += -Ideps -Iinclude -Iv8/include
 CXXFLAGS += -DSTORDB_JS_PATH='"$(STORDB_JS_PATH)"'
 
 ifeq ($(OS), Darwin)
 	CXXFLAGS += -stdlib=libstdc++
+else
+	CXXFLAGS += -lrt
 endif
 
 .PHONY: $(BIN)
@@ -56,11 +57,8 @@ install:
 	install include/stordb.h $(PREFIX)/include
 	cp include/stordb/*.h $(PREFIX)/include/stordb
 	@# v8
-	cp v8/out/$(V8ARCH)/*.a $(PREFIX)/lib
+	cp v8/out/native/*.a $(PREFIX)/lib
 	cp v8/include/*.h $(PREFIX)/include
-	@# leveldb
-	cp -f leveldb/lib* $(PREFIX)/lib
-	cp -rf leveldb/include/leveldb $(PREFIX)/lib/leveldb
 
 link:
 	@# stordb
@@ -70,27 +68,21 @@ link:
 	ln -fs $(CWD)/$(TARGET_STATIC) $(PREFIX)/lib
 	ln -fs $(CWD)/$(BIN) $(PREFIX)/bin
 	@# v8
-	$(foreach lib, $(LIBV8), $(shell ln -sf $(lib) $(PREFIX)/lib/$(shell basename $(lib:.x64.a=.a))))
-	@# leveldb
-	ln -fs $(CWD)/leveldb/lib* $(PREFIX)/lib
-	ln -fs $(CWD)/leveldb/include/leveldb $(PREFIX)/include/leveldb
+	$(foreach lib, $(LIBV8), $(shell ln -sf $(lib) $(PREFIX)/lib/$(shell basename $(lib:.$(V8ARCH).a=.a))))
 
-.PHONY: leveldb v8
-dependencies: leveldb v8
+dependencies: v8
 
-leveldb:
-	@echo "  MAKE $(@)"
-	@CXXFLAGS='$(CXXFLAGS)' make -C $(@) 1>/dev/null
+.PHONY: v8
 
 v8:
 	@echo "  MAKE $(@)"
-	@make $(V8ARCH).release -C $(@)
+	@make dependencies -C $(@)
+	@#make i18nsupport=off $(V8ARCH).release -C $(@)
+	@make i18nsupport=off native -C $(@)
 
 clean:
 	@echo "  MAKE clean v8"
 	@make clean -C v8
-	@echo "  MAKE clean leveldb"
-	@make clean -C leveldb
 	@echo "  MAKE clean v8"
 	@make clean -C v8
 	@echo "  RM $(BIN)"

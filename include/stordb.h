@@ -2,7 +2,6 @@
 #ifndef STORDB_H
 #define STORDB_H
 
-#include <leveldb/db.h>
 #include <v8.h>
 
 #ifndef STORDB_JS_PATH
