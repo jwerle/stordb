@@ -36,9 +36,14 @@ STORDB_MODULE(sys, {
 
 static char *
 wrap (char *src) {
+    char ch = 0;
   char *wrapped = NULL;
   char *key = NULL;
   asprintf(&key, "__sandbox__%ld", time(NULL) * rand());
+  // drop #!
+  if ('#' == src[0]) {
+    while ((ch = *src++)) if ('\n' == ch) { break; }
+  }
   asprintf(&wrapped, ""
       "module %s {"
         "var module = {exports: {}};"
