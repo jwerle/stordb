@@ -36,28 +36,32 @@ STORDB_MODULE(sys, {
 
 static char *
 wrap (char *src) {
-    char ch = 0;
+  char ch = 0;
   char *wrapped = NULL;
   char *key = NULL;
-  asprintf(&key, "__sandbox__%ld", time(NULL) * rand());
+  asprintf(&key, "_s%ld", time(NULL) * rand());
   // drop #!
   if ('#' == src[0]) {
     while ((ch = *src++)) if ('\n' == ch) { break; }
   }
-  asprintf(&wrapped, ""
-      "module %s {"
-        "var module = {exports: {}};"
-        "var exports = module.exports;"
-        "export function __unwrap__ () {"
-          "for (var _ in %s) {"
-            "if ('__unwrap__' != _) { module.exports[_] = %s[_]; }"
-          "}"
-          "return module;"
-        "}"
+
+  asprintf(&wrapped, "module %s {"
+        // commonjs interface
+        "export var module = {exports: {}};"
+        "export var exports = module.exports;"
+
+        // module source
         "%s"
+
+        // unwrap into `module.exports'
+        "{"
+          "let _;"
+          "for (_ in %s) { module.exports[_] = %s[_]; }"
+        "}"
       "}"
-       "%s.__unwrap__();",
-       key, key, key, src, key);
+
+      // return module
+      "%s.module", key, src, key, key, key);
 
   free(key);
   return wrapped;
