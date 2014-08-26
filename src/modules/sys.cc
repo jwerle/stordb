@@ -1,10 +1,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
+#include <libgen.h>
 #include <errno.h>
 #include <time.h>
-#include <libgen.h>
 #include <v8.h>
 
 #include "stordb.h"
@@ -50,7 +51,7 @@ wrap (char *path, char *src) {
 
   asprintf(&wrapped, "module %s {"
         // commonjs interface
-        "export var module = new Module('%s');"
+        "export var module = new Module('%s', module);"
         "var exports = module.exports;"
         "let __filename = module.filename;"
         "let __dirname = module.dirname;"

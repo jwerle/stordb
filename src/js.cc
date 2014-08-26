@@ -15,6 +15,8 @@ stordb_runjs (stordb_t *sdb, const char *name, const char *src) {
 
   //isolate
   v8::Isolate *iso = v8::Isolate::GetCurrent();
+  // lock
+  v8::Locker locker(iso);
 
   // scope
   v8::Isolate::Scope isolate_scope(iso);

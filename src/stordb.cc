@@ -1,6 +1,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <v8.h>
 
 #include "stordb.h"
@@ -12,6 +13,7 @@
 #include "modules/io.h"
 #include "modules/fs.h"
 #include "modules/ld.h"
+#include "modules/coro.h"
 
 extern "C" {
 #include <fs/fs.h>
@@ -167,6 +169,7 @@ _initialize_v8 (stordb_t *sdb, int argc, char **argv, char **env) {
   // handle `NULL' isolates
   if (NULL == iso) { iso = v8::Isolate::New(); }
 
+
   // scope
   v8::Isolate::Scope isolate_scope(iso);
   v8::HandleScope hscope(iso);
@@ -221,7 +224,11 @@ _initialize_v8 (stordb_t *sdb, int argc, char **argv, char **env) {
 
         // read
         js = fs_read(path);
-        if (NULL == js) { return xfree(path), 1; }
+
+        if (NULL == js) {
+          return xfree(path), 1;
+        }
+
 
         // run
         value = stordb_runjs(sdb, path, js);
@@ -256,6 +263,7 @@ _initialize_v8_bindings (stordb_t *sdb) {
   STORDB_MODULE_INIT(io);
   STORDB_MODULE_INIT(fs);
   STORDB_MODULE_INIT(ld);
+  STORDB_MODULE_INIT(coro);
 
   return 0;
 }

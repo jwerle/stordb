@@ -13,6 +13,7 @@
 #define V8FALSE() v8::False(v8::Isolate::GetCurrent())
 #define V8RETURN(value) ({ return args.GetReturnValue().Set(value); })
 #define V8THROW(err) v8::Isolate::GetCurrent()->ThrowException(V8STRING(err))
+#define V8EXTERNAL(v) SDBV8H(v8::External::New, v)
 
 #define V8OBJECT()                                                             \
   v8::ObjectTemplate::New(v8::Isolate::GetCurrent())->NewInstance()

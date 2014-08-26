@@ -2,6 +2,7 @@
 let env = require('env')
 
 export function main (argv) {
+  console.log(module)
   console.log([
     'user: %s',
     'argv: %s',

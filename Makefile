@@ -26,9 +26,14 @@ STORDB_JS_PATH ?= $(PREFIX)/lib/stordb
 TARGET_NAME = libstordb
 TARGET_STATIC = $(TARGET_NAME).a
 
+CORO_FLAGS += -DCORO_PTHREAD
+
+CFLAGS += $(CORO_FLAGS) -std=c99 -Ideps
+
 CXXFLAGS += -std=gnu++11
 CXXFLAGS += -Ideps -Iinclude -Iv8/include
 CXXFLAGS += -DSTORDB_JS_PATH='"$(STORDB_JS_PATH)"'
+CXXFLAGS += $(CORO_FLAGS)
 
 ifeq ($(OS), Darwin)
 	CXXFLAGS += -stdlib=libstdc++
@@ -58,7 +63,7 @@ $(OBJS):
 
 $(DOBJS):
 	@echo "  CC($(@))"
-	$(CC) -std=c99 -Ideps -c $(@:.o=.c) -o $(@)
+	$(CC) $(CFLAGS) -c $(@:.o=.c) -o $(@)
 
 install:
 	@# stordb

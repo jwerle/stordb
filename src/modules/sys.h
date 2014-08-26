@@ -3,12 +3,6 @@
 #define STORDB_SYS_H
 
 #include <v8.h>
-#include <string.h>
-
-extern "C" {
-#include <asprintf/asprintf.h>
-}
-
 #include "stordb/module.h"
 
 STORDB_MODULE_DECLARE(sys);

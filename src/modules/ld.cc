@@ -5,9 +5,6 @@
 #include <errno.h>
 
 #include "stordb.h"
-#include "stordb/macro.h"
-#include "stordb/module.h"
-
 #include "ld.h"
 
 STORDB_MODULE(ld, {
