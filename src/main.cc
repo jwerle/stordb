@@ -28,14 +28,6 @@ main (int argc, char **argv, char **env) {
     if (1 == rc) { return 1; }
   }
 
-  // run any files passed in
-  {
-    int i = 0;
-    for (; i < argc; ++i) {
-      printf("%s\n", argv[i]);
-    }
-  }
-
   v8::V8::Dispose();
   return 0;
 }

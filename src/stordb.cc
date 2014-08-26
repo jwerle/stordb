@@ -138,7 +138,7 @@ _set_argv (stordb_t *sdb) {
   memset(str, 0, 1024);
   while ((arg = argv[i++])) {
     strcat(str, arg);
-    strcat(str, "!!");
+    strcat(str, "_$ARGV$_");
   }
 
   // set `__ARGV__' string
@@ -256,7 +256,6 @@ _initialize_v8_bindings (stordb_t *sdb) {
   STORDB_MODULE_INIT(io);
   STORDB_MODULE_INIT(fs);
   STORDB_MODULE_INIT(ld);
-
 
   return 0;
 }

@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
+#include <libgen.h>
 #include <v8.h>
 
 #include "stordb.h"
@@ -35,11 +36,15 @@ STORDB_MODULE(sys, {
 })
 
 static char *
-wrap (char *src) {
+wrap (char *path, char *src) {
   char ch = 0;
   char *wrapped = NULL;
   char *key = NULL;
+  char *base = NULL;
+  char *dir = NULL;
+
   asprintf(&key, "_s%ld", time(NULL) * rand());
+
   // drop #!
   if ('#' == src[0]) {
     while ((ch = *src++)) if ('\n' == ch) { break; }
@@ -47,8 +52,13 @@ wrap (char *src) {
 
   asprintf(&wrapped, "module %s {"
         // commonjs interface
-        "export var module = {exports: {}};"
-        "export var exports = module.exports;"
+        "export var module = new Module('%s');"
+        "var exports = module.exports;"
+        "let __filename = module.filename;"
+        "let __dirname = module.dirname;"
+        "function require (path) {"
+          "return module.require(path);"
+        "}"
 
         // module source
         "%s"
@@ -56,12 +66,18 @@ wrap (char *src) {
         // unwrap into `module.exports'
         "{"
           "let _;"
-          "for (_ in %s) { module.exports[_] = %s[_]; }"
+          "for (_ in %s) {"
+            "if ('module' != _) {"
+              "module.exports[_] = %s[_];"
+            "}"
+          "}"
         "}"
       "}"
 
       // return module
-      "%s.module", key, src, key, key, key);
+      "%s.module",
+    key, (base = basename(path)),
+    src, key, key, key);
 
   free(key);
   return wrapped;
@@ -94,8 +110,7 @@ resolve (char *path) {
     asprintf(&resolved, "%s/index.js", resolved);
     needs_free = 1;
   }
-
-  if (0 == fs_exists(resolved)) { return resolved; }
+  if (0 == fs_exists(resolved)) {  return resolved; }
   for (;i < size; ++i) {
     free(tmp);
     tmp = NULL;
@@ -148,8 +163,12 @@ stordb_sys_load (const v8::FunctionCallbackInfo<v8::Value> &args) {
   }
 
   // resolve
-  orig = path;
+  orig = strdup(path);
   path = resolve(path);
+
+  if (NULL == path) {
+    path = orig;
+  }
 
   // handle not found
   if (NULL == path) {
@@ -166,7 +185,7 @@ stordb_sys_load (const v8::FunctionCallbackInfo<v8::Value> &args) {
   }
 
   // module wrap
-  char *mod = wrap(buf);
+  char *mod = wrap(path, buf);
 
   // run
   v8::Handle<v8::Value> result = stordb_runjs(sdb, path, mod);

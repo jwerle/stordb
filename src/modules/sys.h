@@ -14,6 +14,9 @@ extern "C" {
 STORDB_MODULE_DECLARE(sys);
 
 void
+stordb_sys_resolve (const v8::FunctionCallbackInfo<v8::Value> &);
+
+void
 stordb_sys_print (const v8::FunctionCallbackInfo<v8::Value> &);
 
 void
