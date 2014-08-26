@@ -40,8 +40,6 @@ wrap (char *path, char *src) {
   char ch = 0;
   char *wrapped = NULL;
   char *key = NULL;
-  char *base = NULL;
-  char *dir = NULL;
 
   asprintf(&key, "_s%ld", time(NULL) * rand());
 
@@ -76,7 +74,7 @@ wrap (char *path, char *src) {
 
       // return module
       "%s.module",
-    key, (base = basename(path)),
+    key, path,
     src, key, key, key);
 
   free(key);
@@ -165,10 +163,6 @@ stordb_sys_load (const v8::FunctionCallbackInfo<v8::Value> &args) {
   // resolve
   orig = strdup(path);
   path = resolve(path);
-
-  if (NULL == path) {
-    path = orig;
-  }
 
   // handle not found
   if (NULL == path) {
